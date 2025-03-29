@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dotnet-cache-pv
+  namespace: tekton-executions
+spec:
+  storageClassName: standart
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+    - ReadWriteOnce
+    - ReadOnlyMany
+  hostPath:
+    path: "/mnt/dotnet-data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dotnet-cache-pvc
+  namespace: tekton-executions
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 4Gi

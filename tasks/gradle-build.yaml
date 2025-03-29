@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: gradle-build
+  namespace: tekton-executions
+spec:
+  params:
+  - name: repo
+    type: string
+    description: Repo URL
+  - name: branch
+    type: string
+    description: Branch of the repo
+    default: master
+  - name: workspace
+    type: string
+    description: workspace
+  - name: namespace
+    type: string
+    description: namespace
+  - name: service
+    type: string
+    description: service
+  - name: builder
+    type: string
+    description: builder image
+  workspaces:
+  - name: output
+  steps:
+  - name: build-gradle-app
+    image: $(params.builder)
+    script: |
+      #!/bin/sh
+      cd $(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)
+      if [ ! -f gradlew ]; then
+        gradle wrapper;
+      fi
+      chmod +x gradlew
+      chmod 777 gradlew
+      ./gradlew --build-cache clean assemble
+      ls -lR
+      if [ $? -ne 0 ]; then
+        echo "Command failed. Changing Task status to failed."
+        exit 1 # Explicitly set a non-zero exit code to fail the task
+      fi
+    volumeMounts:
+    - name: gradle-cache
+      mountPath: /root/.gradle/caches
+  volumes:
+  - name: gradle-cache
+    persistentVolumeClaim:
+      claimName: gradle-cache-pvc

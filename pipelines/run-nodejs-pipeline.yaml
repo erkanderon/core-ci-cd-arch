@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations: {}
+  generateName: nodejs-ci-pipeline-run-
+  labels: {}
+  namespace: tekton-executions
+spec:
+  params:
+    - name: branch
+      value: master
+    - name: repo
+      value: git@github.com:erkanderon/tekton-nodejs.git
+    - name: workspace
+      value: flower
+    - name: namespace
+      value: authentication
+    - name: service
+      value: tekton-node-service
+    - name: registry
+      value: registry.minikube.local:5000
+    - name: builder
+      value: node:18-alpine
+  pipelineRef:
+    name: nodejs-ci-pipeline
+  taskRunTemplate:
+    serviceAccountName: default
+  timeouts:
+    pipeline: 1h0m0s
+  workspaces:
+    - name: codebase
+      persistentVolumeClaim:
+        claimName: tekton-pvc

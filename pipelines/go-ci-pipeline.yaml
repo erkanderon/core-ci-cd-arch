@@ -1,0 +1,110 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: go-ci-pipeline
+  namespace: tekton-executions
+spec:
+  params:
+  - name: repo
+    type: string
+    description: Repo URL
+    default: git@github.com:erkanderon/tekton-go.git
+  - name: branch
+    type: string
+    description: Branch of the repo
+    default: master
+  - name: workspace
+    type: string
+    description: Workspace
+    default: flower
+  - name: namespace
+    type: string
+    description: Namespace
+    default: authentication
+  - name: service
+    type: string
+    description: Service
+    default: tekton-go
+  - name: registry
+    type: string
+    description: Registry Address
+    default: registry.minikube.local:5000
+  - name: version
+    type: string
+    description: Image Version
+    default: latest
+  - name: builder
+    type: string
+    description: Builder image of the app
+  workspaces:
+    - name: codebase
+  tasks:
+    - name: clone
+      params:
+        - name: repo
+          value: $(params.repo)
+        - name: branch
+          value: $(params.branch)
+        - name: workspace
+          value: $(params.workspace)
+        - name: namespace
+          value: $(params.namespace)
+        - name: service
+          value: $(params.service)
+      taskRef:
+        name: clone
+      workspaces:
+        - name: output
+          workspace: codebase
+    - name: go-build
+      params:
+        - name: repo
+          value: $(params.repo)
+        - name: branch
+          value: $(params.branch)
+        - name: workspace
+          value: $(params.workspace)
+        - name: namespace
+          value: $(params.namespace)
+        - name: service
+          value: $(params.service)
+        - name: builder
+          value: $(params.builder)
+      taskRef:
+        name: go-build
+      workspaces:
+        - name: output
+          workspace: codebase
+      runAfter:
+        - clone
+    - name: docker-build-push
+      params:
+        - name: image
+          value: $(params.registry)/$(params.workspace)/$(params.namespace)/$(params.service):$(params.version)
+        - name: workspace
+          value: $(params.workspace)
+        - name: namespace
+          value: $(params.namespace)
+        - name: service
+          value: $(params.service)
+      taskRef:
+        name: docker-build-push
+      workspaces:
+        - name: output
+          workspace: codebase
+      runAfter:
+        - go-build
+  finally:
+    - name: clean-workspace
+      params:
+        - name: workspace
+          value: $(params.workspace)
+        - name: namespace
+          value: $(params.namespace)
+        - name: service
+          value: $(params.service)
+      taskRef: 
+        name: clean-workspace
+      workspaces:
+        - name: output
+          workspace: codebase

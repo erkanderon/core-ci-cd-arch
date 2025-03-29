@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: clone
+  namespace: tekton-executions
+spec:
+  params:
+  - name: repo
+    type: string
+    description: Repo URL
+  - name: branch
+    type: string
+    description: Branch of the repo
+    default: master
+  - name: workspace
+    type: string
+    description: workspace
+  - name: namespace
+    type: string
+    description: namespace
+  - name: service
+    type: string
+    description: service
+  workspaces:
+  - name: output
+  steps:
+  - name: clone-repo
+    image: alpine/git
+    script: |
+      #!/bin/sh
+      export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+      git clone -v -o origin -b $(params.branch) $(params.repo) $(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)
+    volumeMounts:
+    - name: ssh-key
+      mountPath: /root/.ssh/id_rsa
+      subPath: id_rsa
+  volumes:
+  - name: ssh-key
+    secret:
+      secretName: git-ssh-auth
+      items:
+      - key: ssh-privatekey
+        path: id_rsa
+        mode: 0600

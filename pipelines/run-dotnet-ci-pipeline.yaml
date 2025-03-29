@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations: {}
+  generateName: dotnet-ci-pipeline-run-
+  labels: {}
+  namespace: tekton-executions
+spec:
+  params:
+    - name: branch
+      value: master
+    - name: repo
+      value: git@github.com:erkanderon/tekton-dotnet.git
+    - name: workspace
+      value: flower
+    - name: namespace
+      value: authentication
+    - name: service
+      value: tekton-dotnet-service
+    - name: registry
+      value: registry.minikube.local:5000
+    - name: builder
+      value: mcr.microsoft.com/dotnet/sdk:8.0
+  pipelineRef:
+    name: dotnet-ci-pipeline
+  taskRunTemplate:
+    serviceAccountName: default
+  timeouts:
+    pipeline: 1h0m0s
+  workspaces:
+    - name: codebase
+      persistentVolumeClaim:
+        claimName: tekton-pvc
