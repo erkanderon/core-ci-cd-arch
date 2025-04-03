@@ -20,6 +20,9 @@ spec:
   - name: service
     type: string
     description: service
+  - name: version
+    type: string
+    description: version
   steps:
   - name: list-workspace
     image: alpine:latest
@@ -28,6 +31,6 @@ spec:
   - name: build-and-push
     image: gcr.io/kaniko-project/executor:latest
     args:
-    - "--dockerfile=$(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)/Dockerfile"
-    - "--context=$(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)"
+    - "--dockerfile=$(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)/$(params.version)/Dockerfile"
+    - "--context=$(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)/$(params.version)"
     - "--destination=$(params.image)"

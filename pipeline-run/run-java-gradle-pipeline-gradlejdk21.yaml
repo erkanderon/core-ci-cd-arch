@@ -8,7 +8,7 @@ metadata:
 spec:
   params:
     - name: branch
-      value: master
+      value: gradle-jdk21
     - name: repo
       value: git@github.com:erkanderon/tekton-java.git
     - name: workspace
@@ -21,6 +21,8 @@ spec:
       value: registry.minikube.local:5000
     - name: builder
       value: gradle:jdk21-ubi
+    - name: version
+      value: gradle-jdk21
   pipelineRef:
     name: java-ci-gradle-pipeline
   taskRunTemplate:

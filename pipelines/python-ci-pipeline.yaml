@@ -48,6 +48,8 @@ spec:
           value: $(params.namespace)
         - name: service
           value: $(params.service)
+        - name: version
+          value: $(params.version)
       taskRef:
         name: clone
       workspaces:
@@ -63,6 +65,8 @@ spec:
           value: $(params.namespace)
         - name: service
           value: $(params.service)
+        - name: version
+          value: $(params.version)
       taskRef:
         name: docker-build-push
       workspaces:
@@ -79,6 +83,8 @@ spec:
           value: $(params.namespace)
         - name: service
           value: $(params.service)
+        - name: version
+          value: $(params.version)
       taskRef: 
         name: clean-workspace
       workspaces:

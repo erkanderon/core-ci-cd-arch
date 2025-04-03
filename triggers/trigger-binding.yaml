@@ -1,0 +1,69 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: event-binding
+  namespace: tekton-executions
+spec:
+  params:
+    - name: git-repo-url
+      value: $(body.repository.url)
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: commit-tt
+  namespace: tekton-executions
+spec:
+  params:
+    - name: git-repo-url
+      description: The git repository url
+  resourceTemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: python-ci-pipeline-run-from-trigger-
+        namespace: tekton-executions
+      spec:
+        params:
+          - name: branch
+            value: master
+          - name: repo
+            value: git@github.com:erkanderon/tekton-python.git
+          - name: workspace
+            value: flower
+          - name: namespace
+            value: authentication
+          - name: service
+            value: tekton-python-service
+          - name: registry
+            value: registry.minikube.local:5000
+        pipelineRef:
+          name: python-ci-pipeline
+        taskRunTemplate:
+          serviceAccountName: default
+        timeouts:
+          pipeline: 1h0m0s
+        workspaces:
+          - name: codebase
+            persistentVolumeClaim:
+              claimName: tekton-pvc
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener
+  namespace: tekton-executions
+spec:
+  triggers:
+    - name: trigger
+      bindings:
+        - ref: event-binding
+      template:
+        ref: commit-tt
+      interceptors:
+        - github:
+            secretRef:
+              secretName: git-secret
+              secretKey: secretToken
+            eventTypes:
+              - push

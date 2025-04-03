@@ -8,7 +8,7 @@ metadata:
 spec:
   params:
     - name: branch
-      value: maven-jdk8
+      value: maven-jdk17
     - name: repo
       value: git@github.com:erkanderon/tekton-java.git
     - name: workspace
@@ -20,7 +20,9 @@ spec:
     - name: registry
       value: registry.minikube.local:5000
     - name: builder
-      value: maven:3.8.6-openjdk-8 #/usr/local/maven/repo
+      value: maven:3.8.5-openjdk-17 #/usr/local/maven/repo
+    - name: version
+      value: maven-jdk17
   pipelineRef:
     name: java-ci-maven-pipeline
   taskRunTemplate:

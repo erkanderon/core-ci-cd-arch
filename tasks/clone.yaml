@@ -21,6 +21,9 @@ spec:
   - name: service
     type: string
     description: service
+  - name: version
+    type: string
+    description: version
   workspaces:
   - name: output
   steps:
@@ -29,7 +32,11 @@ spec:
     script: |
       #!/bin/sh
       export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-      git clone -v -o origin -b $(params.branch) $(params.repo) $(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)
+      git clone -v -o origin -b $(params.branch) $(params.repo) $(workspaces.output.path)/$(params.workspace)/$(params.namespace)/$(params.service)/$(params.version)
+      if [ $? -ne 0 ]; then
+        echo "Command failed. Changing Task status to failed."
+        exit 1 # Explicitly set a non-zero exit code to fail the task
+      fi
     volumeMounts:
     - name: ssh-key
       mountPath: /root/.ssh/id_rsa

@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations: {}
+  generateName: java-ci-maven-pipeline-run-
+  labels: {}
+  namespace: tekton-executions
+spec:
+  params:
+    - name: branch
+      value: maven-jdk21
+    - name: repo
+      value: git@github.com:erkanderon/tekton-java.git
+    - name: workspace
+      value: flower
+    - name: namespace
+      value: authentication
+    - name: service
+      value: tekton-java-service
+    - name: registry
+      value: registry.minikube.local:5000
+    - name: builder
+      value: jelastic/maven:3.9.5-openjdk-21 #/usr/local/maven/repo
+    - name: version
+      value: maven-jdk21
+  pipelineRef:
+    name: java-ci-maven-pipeline
+  taskRunTemplate:
+    serviceAccountName: default
+  timeouts:
+    pipeline: 1h0m0s
+  workspaces:
+    - name: codebase
+      persistentVolumeClaim:
+        claimName: tekton-pvc
