@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations: {}
+  generateName: sonar-pipeline-run-
+  labels: {}
+  namespace: tekton-executions
+spec:
+  params:
+    - name: branch
+      value: master
+    - name: repo
+      value: git@github.com:erkanderon/tekton-python.git
+    - name: workspace
+      value: flower
+    - name: namespace
+      value: authentication
+    - name: service
+      value: tekton-python-service
+    - name: sonar-host
+      value: http://sonarqube-service.sonarqube.svc:9000
+    - name: sonar-login
+      value: admin
+    - name: sonar-password
+      value: test
+    - name: sonar-scanner-image
+      value: docker.io/sonarsource/sonar-scanner-cli:latest
+    - name: project-type
+      value: "python"
+  pipelineRef:
+    name: sonar-scan-nodejs-go-python-pipeline
+  taskRunTemplate:
+    serviceAccountName: default
+  timeouts:
+    pipeline: 1h0m0s
+  workspaces:
+    - name: codebase
+      persistentVolumeClaim:
+        claimName: tekton-pvc
