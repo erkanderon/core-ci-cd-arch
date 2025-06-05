@@ -1,0 +1,25 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitlab-push-template
+  namespace: tekton-executions
+spec:
+  params:
+    - name: repository_name
+    - name: revision
+    - name: branch
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: gitlab-pipeline-run-
+      spec:
+        pipelineRef:
+          name: push-trigger-jenkins
+        params:
+          - name: revision
+            value: $(tt.params.revision)
+          - name: repository_name
+            value: $(tt.params.repository_name)
+          - name: branch
+            value: $(tt.params.branch)

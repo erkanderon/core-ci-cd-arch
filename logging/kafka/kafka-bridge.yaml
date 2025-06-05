@@ -1,0 +1,47 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaBridge
+metadata:
+  name: kafka
+  namespace: kafka # Kafka ve Strimzi namespace'iniz
+spec:
+  replicas: 1
+  bootstrapServers: kafka-logging-kafka-bootstrap:9092 # Kafka bootstrap servisinizin adresi
+  http:
+    port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kafka-bridge-ingress
+  namespace: kafka # Kafka ve Strimzi namespace'iniz
+  annotations:
+    kubernetes.io/ingressClassName: nginx # Kullandığınız Ingress Controller'a göre değiştirin
+spec:
+  rules:
+  - host: kafka-logging.tr.zip.co
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kafka-bridge-service
+            port:
+              number: 8080
+
+####
+####curl -X POST \
+####     -H "Content-Type: application/vnd.kafka.json.v2+json" \
+####     -d '{
+####           "records": [
+####             {
+####               "key": "anahtar-1",
+####               "value": {"alan1": "deger1", "alan2": 123}
+####             },
+####             {
+####               "value": "Sadece bir string mesaj"
+####             }
+####           ]
+####         }' \
+####     "https://kafka-logging.tr.zip.co:443/topics/hola"
+####

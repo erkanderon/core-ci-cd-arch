@@ -1,0 +1,19 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: gitlab-merge-trigger
+  namespace: tekton-executions
+spec:
+  interceptors:
+    - name: "CEL filter: only when PRs are opened"
+      ref:
+        name: "cel"
+      params:
+      - name: "filter"
+        value: "header.match('X-Gitlab-Event', 'Merge Request Hook') &&
+                body.object_attributes.state == 'merged' &&
+                body.project.default_branch == body.object_attributes.target_branch"
+  bindings:
+    - ref: gitlab-merge-binding
+  template:
+    ref: gitlab-merge-template

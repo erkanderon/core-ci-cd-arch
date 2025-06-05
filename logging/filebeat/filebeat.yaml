@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: elastic-system
+data:
+  filebeat.yml: |-
+    filebeat.inputs:
+    - type: log
+      paths:
+        - /var/log/myapp/*.log
+    output.kafka:
+      hosts: ["kafka-logging-kafka-bootstrap.kafka.svc.mngk8scls1.ziptr.local:9092"] # Kafka broker adreslerinizi girin
+      topic: "hola"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filebeat-kafka
+  namespace: elastic-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: filebeat-kafka
+  template:
+    metadata:
+      labels:
+        app: filebeat-kafka
+    spec:
+      containers:
+      - name: filebeat
+        image: docker.elastic.co/beats/filebeat:7.17.0 # Filebeat sürümünü ihtiyacınıza göre ayarlayın
+        args: [
+          "-c", "/etc/filebeat.yml",
+          "-e",
+        ]
+        volumeMounts:
+        - name: config
+          mountPath: /etc/filebeat.yml
+          subPath: filebeat.yml
+        - name: logs
+          mountPath: /var/log/myapp
+      volumes:
+      - name: config
+        configMap:
+          name: filebeat-config
+      - name: logs
+        emptyDir: {} # Uygulamanızın loglarını buraya yazması gerekiyor

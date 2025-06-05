@@ -1,0 +1,21 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: gitlab-push-trigger
+  namespace: tekton-executions
+spec:
+  interceptors:
+    - name: "CEL filter: only pushes"
+      ref:
+        name: "cel"
+      params:
+      - name: "filter"
+        value: |
+          header.match('X-Gitlab-Event', 'Push Hook') &&
+          'refs/heads/' + body.project.default_branch == body.ref &&
+          body.object_kind == 'push' &&
+          !body.commits.exists(c, c.message.matches("^Merge.*"))
+  bindings:
+    - ref: gitlab-push-binding
+  template:
+    ref: gitlab-push-template

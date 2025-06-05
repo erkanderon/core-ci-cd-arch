@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trigger-jenkins
+  namespace: tekton-executions
+data:
+  requirements.txt: |-
+    requests
+  trigger_jenkins.py: |-
+    import requests
+    from requests.auth import HTTPBasicAuth
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Trigger Build")
+
+    parser.add_argument(
+        "--branch",
+        required=True,
+        help="Example master",
+    )
+
+    parser.add_argument(
+        "--repository_name",
+        required=True,
+        help="Example project-test"
+    )
+
+    parser.add_argument(
+        "--jenkins_url",
+        required=True,
+        help="Example project-test"
+    )
+
+    parser.add_argument(
+        "--username",
+        required=True,
+        help="Example project-test"
+    )
+
+    parser.add_argument(
+        "--api_token",
+        required=True,
+        help="Example project-test"
+    )
+    args = parser.parse_args()
+
+    args.branch = "".join(args.branch.split("refs/heads/"))
+
+    JOB_PARAMETERS = {
+        'BRANCH': args.branch,
+    }
+    # =======================================================
+    job_list = {
+        "stream-hub": "/job/ZIP/job/CORE/job/stream-hub/job/1.Build/buildWithParameters",
+        "ReportWiz": "/job/reportwiz/job/0_Build/buildWithParameters",
+        "trigger-test-project-removable": "/job/test/buildWithParameters"
+    }
+
+    if args.repository_name not in job_list:
+        exit(0)
+
+    def get_jenkins_crumb():
+        crumb_url = f"{args.jenkins_url}/crumbIssuer/api/json"
+        response = requests.get(crumb_url, auth=HTTPBasicAuth(args.username, args.api_token))
+        
+        if response.status_code != 200:
+            print(f"Failed to get CSRF crumb: {response.status_code}")
+            print(response.text)
+            return None
+
+        crumb_data = response.json()
+        return {crumb_data['crumbRequestField']: crumb_data['crumb']}
+
+    def trigger_param_job():
+        crumb_header = get_jenkins_crumb()
+        if not crumb_header:
+            return
+
+        build_url = f"{args.jenkins_url}{job_list[args.repository_name]}"
+        print(f"Triggering job '{build_url}' with parameters: {JOB_PARAMETERS}")
+        
+        headers = crumb_header
+        response = requests.post(build_url,
+                                auth=HTTPBasicAuth(args.username, args.api_token),
+                                headers=headers,
+                                params=JOB_PARAMETERS)
+
+        if response.status_code == 201:
+            print("Job successfully triggered.")
+        elif response.status_code == 403:
+            print("Permission denied. Check credentials or CSRF token settings.")
+        else:
+            print(f"Failed to trigger job. Status code: {response.status_code}")
+            print(response.text)
+
+    if __name__ == '__main__':
+        trigger_param_job()

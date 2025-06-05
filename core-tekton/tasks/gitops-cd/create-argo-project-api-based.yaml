@@ -1,0 +1,74 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: create-argo-project-api-based
+  namespace: tekton-executions
+spec:
+  params:
+  - name: workspace
+    type: string
+    description: workspace
+  - name: project
+    type: string
+    description: project
+  - name: service
+    type: string
+    description: service
+  - name: namespace
+    type: string
+    description: namespace
+  - name: environment
+    type: string
+    description: environment
+    default: test
+  - name: repo
+    type: string
+    description: argo repository remote address
+    default: test
+  - name: version
+    type: string
+    description: version
+  workspaces:
+  - name: output
+  steps:
+  - name: create-argo-project
+    image: python:3.9-alpine
+    script: |
+      #!/bin/sh
+      apk add yq
+      mkdir -p /tmp/$(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+      cd /tmp/$(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+
+      pip3 install -r /templates/argo-template/requirements.txt || exit 1
+
+      username=$(cat /argo-api-credentials/$(params.environment)-argo-username)
+      password=$(cat /argo-api-credentials/$(params.environment)-argo-password)
+      server=$(cat /argo-api-credentials/$(params.environment)-argo-server)
+
+      echo "Username is: $username"
+      echo "Password is: $password"
+      echo "Server is: $server"
+
+      python /templates/argo-template/create_argo_application.py \
+        --argo_app_name $(params.project)-$(params.service)-$(params.environment) \
+        --namespace $(params.namespace) \
+        --username $username \
+        --password $password \
+        --argocd_server $server \
+        --repo_address $(params.repo) \
+        --environment $(params.environment) \
+        --app_folder_path $(params.workspace)/$(params.project)/$(params.service)/$(params.environment) || exit 1
+    
+    volumeMounts:
+        - name: argo-template
+          mountPath: /templates/argo-template
+        - name: argo-api-credentials
+          mountPath: /argo-api-credentials
+          readOnly: true
+  volumes:
+    - name: argo-template
+      configMap:
+        name: argo-template-api-based
+    - name: argo-api-credentials
+      secret:
+        secretName: argo-api-credentials

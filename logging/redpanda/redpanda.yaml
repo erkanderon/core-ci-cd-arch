@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redpanda-console
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda-console
+  template:
+    metadata:
+      labels:
+        app: redpanda-console
+    spec:
+      containers:
+      - name: redpanda-console
+        image: docker.redpanda.com/redpandadata/console:latest # Redpanda Console sürümünü ihtiyacınıza göre ayarlayın
+        ports:
+        - containerPort: 8080
+        env:
+        - name: KAFKA_BROKERS
+          value: "kafka-logging-kafka-bootstrap.kafka.svc.mngk8scls1.ziptr.local:9092" # Redpanda Kafka servis adınızı girin
+        - name: AUTH_ENABLED
+          value: "false" # Kimlik doğrulamayı devre dışı bırakır (test amaçlı)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda
+  namespace: kafka
+spec:
+  selector:
+    app: redpanda-console
+  ports:
+    - name: redpanda-8080
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: redpanda-ingress
+  namespace: kafka
+  annotations:
+    kubernetes.io/ingressClassName: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  tls:
+    - hosts:
+        - redpanda-logging.tr.zip.co
+  rules:
+    - host: redpanda-logging.tr.zip.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: redpanda
+                port:
+                  number: 8080

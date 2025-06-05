@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: clean-completed-tasks
+  namespace: tekton-executions
+spec:
+  stepTemplate:
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      runAsNonRoot: false
+      seccompProfile:
+        type: RuntimeDefault
+  params:
+  - name: namespace
+    type: string
+    default: tekton-executions
+  steps:
+  - name: delete
+    image: bitnami/kubectl:latest
+    script: |
+      kubectl delete pods --field-selector=status.phase!=Running -n $(params.namespace)

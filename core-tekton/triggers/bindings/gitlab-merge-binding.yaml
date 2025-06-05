@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitlab-merge-binding
+  namespace: tekton-executions
+spec:
+  params:
+    - name: repository_name
+      value: $(body.project.name)
+    - name: branch
+      value: $(body.object_attributes.target_branch)

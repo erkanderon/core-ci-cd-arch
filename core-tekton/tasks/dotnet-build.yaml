@@ -1,0 +1,50 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: dotnet-build
+  namespace: tekton-executions
+spec:
+  params:
+  - name: repo
+    type: string
+    description: Repo URL
+  - name: branch
+    type: string
+    description: Branch of the repo
+    default: master
+  - name: workspace
+    type: string
+    description: workspace
+  - name: project
+    type: string
+    description: project
+  - name: service
+    type: string
+    description: service
+  - name: builder
+    type: string
+    description: builder image
+  - name: version
+    type: string
+    description: version
+  workspaces:
+  - name: output
+  steps:
+  - name: build-dotnet-app
+    image: $(params.builder)
+    script: |
+      #!/bin/sh
+      cd $(workspaces.output.path)/$(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+      dotnet restore
+      dotnet publish -c Release -o out
+      if [ $? -ne 0 ]; then
+        echo "Command failed. Changing Task status to failed."
+        exit 1 # Explicitly set a non-zero exit code to fail the task
+      fi
+    volumeMounts:
+    - name: dotnet-cache
+      mountPath: /root/.nuget/packages
+  volumes:
+  - name: dotnet-cache
+    persistentVolumeClaim:
+      claimName: dotnet-cache-pvc

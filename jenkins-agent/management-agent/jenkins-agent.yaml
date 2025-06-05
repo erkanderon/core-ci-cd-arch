@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: management-slave
+  namespace: tekton-pipelines
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: management-slave
+  template:
+    metadata:
+      labels:
+        app: management-slave
+    spec:
+      containers:
+        - name: management-slave
+          image: registry/jenkins-slave:1.0.2
+          imagePullPolicy: Always
+          env:
+            - name: url
+              value: "http://10.130.140.2:8080/" # Jenkins master servisinizin URL'si
+            - name: secret
+              value: secret
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"

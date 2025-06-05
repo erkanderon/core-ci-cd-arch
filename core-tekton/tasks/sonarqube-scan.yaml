@@ -1,0 +1,87 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sonarqube-scan
+  namespace: tekton-executions
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: SONAR_HOST_URL
+      type: string
+      description: URL of the SonarQube server.
+    - name: SONAR_PROJECT_KEY
+      type: string
+      description: Unique key for the SonarQube project.
+    - name: SONAR_PROJECT_NAME
+      type: string
+      description: Name of the SonarQube project.
+    - name: SOURCES
+      type: string
+      description: Comma-separated list of source directories to scan.
+      default: "."
+    - name: SONAR_LOGIN
+      type: string
+      description: SonarQube login token or username (if no token).
+      default: ""
+    - name: SONAR_PASSWORD
+      type: string
+      description: SonarQube password (if no token).
+      default: ""
+    - name: SONAR_SCANNER_IMAGE
+      type: string
+      description: The SonarQube scanner CLI image to use.
+      default: docker.io/sonarsource/sonar-scanner-cli:latest
+    - name: PROJECT_TYPE
+      type: string
+      description: Type of project
+      default: "python"
+    - name: SONAR_PROJECT_VERSION
+      type: string
+      description: The version of the SonarQube project to set.
+      default: "1.0"
+  steps:
+    - name: sonar-scan
+      image: $(params.SONAR_SCANNER_IMAGE)
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/usr/bin/env sh
+        echo "Starting SonarQube scan..."
+        cd $(workspaces.output.path)
+        mkdir -p sonarqube/$(params.SOURCES)
+        cd sonarqube/$(params.SOURCES)
+        mkdir .scannerwork
+        chmod 775 .scannerwork
+        
+
+        if [ -n "$(params.SONAR_LOGIN)" ]; then
+          SONAR_AUTH="-Dsonar.login=$(params.SONAR_LOGIN)"
+        fi
+
+        EXTRA_PARAM=""
+        
+        if [ -n "$(params.SONAR_PASSWORD)" ]; then
+          SONAR_AUTH="-Dsonar.login=$(params.SONAR_LOGIN) -Dsonar.password=$(params.SONAR_PASSWORD)"
+        fi
+
+        if [ $(params.PROJECT_TYPE) != "python" ] && [ $(params.PROJECT_TYPE) != "nodejs" ] && [ $(params.PROJECT_TYPE) != "go" ]; then
+          echo "Project type should be one of the python, nodejs or go"
+          exit 0;
+        fi
+
+        if [ $(params.PROJECT_TYPE) = "python" ]; then
+          EXTRA_PARAM="${EXTRA_PARAM} -Dsonar.python.version=3"
+        fi
+
+        sonar-scanner \
+          -Dsonar.host.url=$(params.SONAR_HOST_URL) \
+          -Dsonar.projectKey=$(params.SONAR_PROJECT_KEY) \
+          -Dsonar.projectName=$(params.SONAR_PROJECT_NAME) \
+          -Dsonar.projectBaseDir=$(workspaces.output.path)/$(params.SOURCES) \
+          -Dsonar.projectVersion=$(params.SONAR_PROJECT_VERSION) \
+          -Dsonar.working.directory=$(workspaces.output.path)/sonarqube/$(params.SOURCES) \
+          ${SONAR_AUTH} \
+          ${EXTRA_PARAM}
+      env:
+        - name: SONAR_SCANNER_OPTS
+          value: -Dsonar.sourceEncoding=UTF-8

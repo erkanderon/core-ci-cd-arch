@@ -1,0 +1,120 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: sonar-scan-nodejs-go-python-pipeline
+  namespace: tekton-executions
+spec:
+  params:
+  - name: repo
+    type: string
+    description: Repo URL
+    default: git@github.com:erkanderon/tekton-python.git
+  - name: branch
+    type: string
+    description: Branch of the repo
+    default: master
+  - name: workspace
+    type: string
+    description: Workspace
+    default: flower
+  - name: project
+    type: string
+    description: Project
+    default: core
+  - name: namespace
+    type: string
+    description: Namespace
+    default: authentication
+  - name: service
+    type: string
+    description: Service
+    default: tekton-python
+  - name: version
+    type: string
+    description: Image Version
+    default: latest
+  - name: sonar-host
+    type: string
+    description: Sonar Host Url
+    default: http://sonarqube-service.sonarqube.svc:9000
+  - name: sonar-login
+    type: string
+    description: Sonar Username or Token
+    default: admin
+  - name: sonar-password
+    type: string
+    description: Sonar Password for username. Not works if token is given
+    default: test
+  - name: sonar-scanner-image
+    type: string
+    description: Sonar Scanner Image
+    default: docker.io/sonarsource/sonar-scanner-cli:latest
+  - name: project-type
+    type: string
+    description: Sonar Project Type of nodejs python or go
+    default: "python"
+  workspaces:
+    - name: codebase
+  tasks:
+    - name: clone
+      params:
+        - name: repo
+          value: $(params.repo)
+        - name: branch
+          value: $(params.branch)
+        - name: workspace
+          value: $(params.workspace)
+        - name: project
+          value: $(params.project)
+        - name: service
+          value: $(params.service)
+        - name: version
+          value: $(params.version)
+      taskRef:
+        name: clone
+      workspaces:
+        - name: output
+          workspace: codebase
+    - name: sonar-scan
+      params:
+        - name: SONAR_HOST_URL
+          value: $(params.sonar-host)
+        - name: SONAR_PROJECT_KEY
+          value: $(params.workspace)-$(params.project)-$(params.service)
+        - name: SONAR_PROJECT_NAME
+          value: $(params.workspace)-$(params.project)-$(params.service)
+        - name: SOURCES
+          value: $(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+        - name: SONAR_LOGIN
+          value: $(params.sonar-login)
+        - name: SONAR_PASSWORD
+          value: $(params.sonar-password)
+        - name: SONAR_SCANNER_IMAGE
+          value: $(params.sonar-scanner-image)
+        - name: PROJECT_TYPE
+          value: $(params.project-type)
+        - name: SONAR_PROJECT_VERSION
+          value: $(params.version)
+      taskRef:
+        name: sonarqube-scan
+      workspaces:
+        - name: output
+          workspace: codebase
+      runAfter:
+        - clone
+  finally:
+    - name: clean-workspace
+      params:
+        - name: workspace
+          value: $(params.workspace)
+        - name: project
+          value: $(params.project)
+        - name: service
+          value: $(params.service)
+        - name: version
+          value: $(params.version)
+      taskRef: 
+        name: clean-workspace
+      workspaces:
+        - name: output
+          workspace: codebase

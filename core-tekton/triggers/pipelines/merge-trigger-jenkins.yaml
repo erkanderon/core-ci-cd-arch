@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: merge-trigger-jenkins
+  namespace: tekton-executions
+spec:
+  params:
+    - name: repository_name
+      type: string
+    - name: branch
+      type: string
+  tasks:
+    - name: trigger-jenkins
+      taskRef:
+        name: trigger-jenkins-job
+      params:
+        - name: repository_name
+          value: $(params.repository_name)
+        - name: branch
+          value: $(params.branch)

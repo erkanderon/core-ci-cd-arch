@@ -1,0 +1,63 @@
+apiVersion: logstash.k8s.elastic.co/v1alpha1
+kind: Logstash
+metadata:
+  name: logstash
+  namespace: elastic-system
+spec:
+  version: 8.17.2
+  count: 1
+  elasticsearchRefs:
+    - clusterName: elasticsearch-logging
+      name: elasticsearch-logging
+  pipelinesRef:
+    secretName: log-pipeline
+  volumeClaimTemplates:
+    - metadata:
+        name: logstash-data
+        namespace: elastic-system 
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: log-pipeline
+  namespace: elastic-system
+stringData:
+  pipelines.yml: |-
+    - pipeline.id: main
+      config.string: |
+        input {
+          kafka {
+            bootstrap_servers => "kafka-logging-kafka-bootstrap.kafka.svc.mngk8scls1.ziptr.local:9092"
+            topics_pattern => ".*" # Tüm topic'leri dinlemek için regex
+            auto_offset_reset => "earliest" # En eski offset'ten başlamak için
+            consumer_threads => 5 # Tüketici iş parçacığı sayısı
+            decorate_events => true # Topic adını event metadata'sına ekler
+            codec => "json"
+          }
+        }
+
+        filter {
+          json {
+            source => "message"
+            target => "json_data"
+          }
+        }
+
+        output {
+          elasticsearch {
+            hosts => "${ELASTICSEARCH_LOGGING_ES_HOSTS}"
+            index => "logstash-%{[@metadata][kafka][topic]}-app-logs-%{+yyyy.MM.dd}"
+            user => "${ELASTICSEARCH_LOGGING_ES_USER}" #Elasticsearch kullanıcı adını girin
+            password => "${ELASTICSEARCH_LOGGING_ES_PASSWORD}"
+            ssl_certificate_authorities => "${ELASTICSEARCH_LOGGING_ES_SSL_CERTIFICATE_AUTHORITY}"
+            ecs_compatibility => disabled
+          }
+        }
+

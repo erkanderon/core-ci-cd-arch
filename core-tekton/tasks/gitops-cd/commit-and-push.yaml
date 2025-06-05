@@ -1,0 +1,94 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: commit-and-push
+  namespace: tekton-executions
+spec:
+  params:
+  - name: workspace
+    type: string
+    description: workspace
+  - name: project
+    type: string
+    description: project
+  - name: service
+    type: string
+    description: service
+  - name: message
+    type: string
+    description: commit message
+    default: Autofilled message as default
+  - name: version
+    type: string
+    description: version
+  workspaces:
+  - name: output
+  steps:
+  - name: create-argo-project
+    image: alpine/git
+    script: |
+      #!/bin/sh
+      export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+      cd $(workspaces.output.path)/$(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+
+      echo "----------------------------------------"
+      git branch
+      echo "----------------------------------------"
+
+      echo "----------------------------------------"
+      git status
+      echo "----------------------------------------"
+
+      git config --global user.email "tekton@tekton.com"
+      git config --global user.name "tekton"
+
+      git add .
+
+      MAX_RETRIES=3
+      # Check if there are changes.
+      if ! git diff --quiet HEAD --; then
+          # Commit the changes
+          git commit -m "$(params.message)"
+          if [[ $? -ne 0 ]]; then
+              echo "Error: Failed to commit changes"
+              return 1
+          fi
+
+          # Push the changes, with retry logic
+          attempt=1
+          while [[ $attempt -le $MAX_RETRIES ]]; do
+              git push origin main
+              if [[ $? -eq 0 ]]; then
+                  echo "Successfully pushed changes"
+                  break
+              else
+                  echo "Push failed (attempt $attempt/$MAX_RETRIES).  Pulling and merging before retrying..."
+                  git pull --rebase origin main # Use --rebase to keep history cleaner
+                  if [[ $? -ne 0 ]]; then
+                      echo "Error: Failed to pull latest changes.  Aborting."
+                      return 1
+                  fi
+                  attempt=$((attempt+1))
+              fi
+          done
+          if [[ $attempt -gt $MAX_RETRIES ]]; then
+              echo "Error: Failed to push changes after $MAX_RETRIES attempts.  Aborting."
+              return 1
+          fi
+          echo "Successfully updated Argo git repository."
+      else
+          echo "No changes detected.  No commit or push performed."
+      fi
+      
+    volumeMounts:
+        - name: ssh-key
+          mountPath: /root/.ssh/id_rsa
+          subPath: id_rsa
+  volumes:
+    - name: ssh-key
+      secret:
+        secretName: git-ssh-auth
+        items:
+        - key: ssh-privatekey
+          path: id_rsa
+          mode: 0600

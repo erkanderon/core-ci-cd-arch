@@ -1,0 +1,22 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitlab-merge-template
+  namespace: tekton-executions
+spec:
+  params:
+    - name: repository_name
+    - name: branch
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: gitlab-pipeline-run-
+      spec:
+        pipelineRef:
+          name: merge-trigger-jenkins
+        params:
+          - name: repository_name
+            value: $(tt.params.repository_name)
+          - name: branch
+            value: $(tt.params.branch)

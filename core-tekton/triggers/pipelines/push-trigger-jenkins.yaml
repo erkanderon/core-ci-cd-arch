@@ -1,0 +1,28 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: push-trigger-jenkins
+  namespace: tekton-executions
+spec:
+  params:
+    - name: revision
+      type: string
+    - name: repository_name
+      type: string
+    - name: branch
+      type: string
+  tasks:
+    - name: trigger-jenkins
+      taskRef:
+        name: trigger-jenkins-job
+      params:
+        - name: repository_name
+          value: $(params.repository_name)
+        - name: branch
+          value: $(params.branch)
+#    - name: log-commit
+#      taskRef:
+#        name: logger
+#      params:
+#        - name: text
+#          value: "A push happened in $(params.repository_name) - $(params.branch) - $(params.revision)"

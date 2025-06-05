@@ -1,0 +1,12 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: gitlab-event-listener
+  namespace: tekton-executions
+spec:
+  serviceAccountName: tekton-triggers-sa
+  triggers:
+    - name: on-push
+      triggerRef: gitlab-push-trigger
+    - name: on-merge
+      triggerRef: gitlab-merge-trigger

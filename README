@@ -1,0 +1,36 @@
+### TOPICS
+
+- [x] CI CD
+     - [x] CI
+        - [x] Go Build
+        - [x] Java Build
+        - [x] Nodejs Build
+        - [x] Python
+        - [ ] Kotlin
+        - [ ] .NET
+        - [x] Sonarqube
+        - [ ] Trivy
+        - [x] Webhooks
+            - [x] Gitlab
+                - [x] Merge
+                - [x] Push
+                - [ ] Merge commenter AI, code syntax check, performance comments
+            - [ ] Bitbucket
+            - [ ] Github
+     - [x] CD
+        - [x] ArgoCD Deployment
+- [x] Pipelines Monitoring
+     - [x] Jenkins
+     - [ ] Tekton 
+- [ ] Chatbot
+    - [ ] Slack
+      - [ ] Pipeline, Repo Create or Delete
+- [ ] Product Installation, Setup and Test UI
+- [x] Jenkins Slave Automation
+- [x] Logging Architecture
+    - [x] ELK Best Practise
+        - [x] Redpanda
+        - [x] Kafka
+        - [x] Logstash
+        - [x] Elasticsearch
+        - [x] Kibana

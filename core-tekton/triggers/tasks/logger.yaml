@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: logger
+  namespace: tekton-executions
+spec:
+  params:
+    - name: text
+      type: string
+  steps:
+    - name: log
+      image: alpine
+      script: |
+        CURRENT_DATE=$(date +"%Y-%m-%d %H:%M:%S")
+        echo [$CURRENT_DATE] - $(params.text)

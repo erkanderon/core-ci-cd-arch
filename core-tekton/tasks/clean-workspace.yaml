@@ -1,0 +1,28 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: clean-workspace
+  namespace: tekton-executions
+spec:
+  params:
+  - name: workspace
+    type: string
+    description: workspace
+  - name: project
+    type: string
+    description: project
+  - name: service
+    type: string
+    description: service
+  - name: version
+    type: string
+    description: version
+  workspaces:
+    - name: output
+  steps:
+    - name: remove-output
+      image: alpine
+      script: |
+        #!/bin/sh
+        rm -rf $(workspaces.output.path)/$(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+        echo All files are deleted

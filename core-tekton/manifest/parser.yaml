@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parser
+  namespace: tekton-executions
+data:
+  parser.py: |-
+    import yaml
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--values_path", help="", required=True)
+    parser.add_argument("--template_path", help="", required=True)
+
+    args = parser.parse_args()
+
+    with open(args.template_path, "r") as file:
+      template = yaml.safe_load(file)
+    with open(args.values_path, "r") as file:
+      values = yaml.safe_load(file)
+
+    def visit_values(data, path=""):
+      global values
+
+      if isinstance(data, dict):
+        for key, value in data.items():
+          new_path = f"{path}.{key}"
+          data[key] = visit_values(value, new_path)
+      elif isinstance(data, list):
+        for i, value in enumerate(data):
+          new_path = f"{path}[{i}]" if path else f"[{i}]"
+          data[i] = visit_values(value, new_path)
+      else:
+        for p, value in values.items():
+          if isinstance(data, str) and "$({})".format(p) in data:
+            try:
+              data = data.replace("$({})".format(p), value)
+            except:
+              try:
+                data = int(data.replace("$({})".format(p), str(value)))
+              except:
+                data = str(data.replace("$({})".format(p), str(value)))
+      return data
+    updated_value = visit_values(template)
+
+    try:
+      with open(args.template_path, "w") as f:
+        yaml.dump(updated_value, f)
+    except:
+      print(f"Error writing to YAML file: {e}")
+  requirements.txt: |-
+    PyYAML

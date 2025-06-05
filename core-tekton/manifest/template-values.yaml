@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: template-values
+  namespace: tekton-executions
+data:
+  values.yaml: |-
+    name:
+    namespace:
+    environment:
+    image:
+    replicas: 0

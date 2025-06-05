@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-template-api-based
+  namespace: tekton-executions
+data:
+  requirements.txt: |-
+    requests
+  create_argo_application.py: |-
+    #!/usr/bin/python3
+    # -*- coding: utf-8 -*-
+
+    import requests
+    import json
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Deployment CLI")
+
+    parser.add_argument(
+        "--argo_app_name",
+        required=True,
+        type=str.lower,
+        help="Example project-service-environment",
+    )
+
+    parser.add_argument(
+        "--namespace",
+        required=True,
+        type=str.lower,
+        help="Example project-test"
+    )
+
+    parser.add_argument(
+        "--app_folder_path",
+        required=True,
+        help="Example workspace/project/service/test"
+    )
+
+    parser.add_argument(
+        "--username",
+        required=True,
+        help="argo username"
+    )
+
+    parser.add_argument(
+        "--password",
+        required=True,
+        help="argo password"
+    )
+
+    parser.add_argument(
+        "--argocd_server",
+        required=True,
+        help="Example argocd.example.com"
+    )
+
+    parser.add_argument(
+        "--repo_address",
+        required=True,
+        help="Example git@gitlab.example.com:devops/argocd.git"
+    )
+
+    parser.add_argument(
+        "--environment",
+        required=True,
+        help="Example git@gitlab.example.com:devops/argocd.git"
+    )
+
+    args = parser.parse_args()
+
+    insecure = True
+    syncPolicy = {"prune": False, "enabled": False} if args.environment == 'prod' else {"prune": False}
+
+    session = requests.Session()  # Daha verimli bağlantı yönetimi için bir session kullanın
+    if insecure:
+        session.verify = False
+
+    def _login():
+        """
+        Argo CD API'sine giriş yapar ve bir kimlik doğrulama jetonu alır.
+        """
+        login_url = f"https://{args.argocd_server}/api/v1/session"
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        payload = {
+            "username": args.username,
+            "password": args.password,
+        }
+        try:
+            response = session.post(login_url, data=json.dumps(payload), headers=headers)
+            response.raise_for_status()  # Hatalı durum kodları için hata yükselt
+            return response.json()["token"]
+        except requests.exceptions.RequestException as e:
+            print(f"Argo CD'ye giriş yapılamadı: {e}")
+            return None
+
+    def create_project_if_not_exist(project_name):
+        """
+        Argo CD'de bir proje oluşturur.
+        """
+        if not token:
+            print("Argo CD'ye giriş yapılmadı. Lütfen kimlik bilgilerini kontrol edin.")
+            return False
+
+        project_url = f"https://{args.argocd_server}/api/v1/applications"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "metadata": {
+                "name": f"{project_name}",
+                "namespace": "argocd",
+                "finalizers": ["resources-finalizer.argocd.argoproj.io"],
+                "labels": {"name": f"{project_name}"}
+            },
+            "spec": {
+                "project": "default",
+                "source": {
+                    "repoURL": args.repo_address,
+                    "targetRevision": "HEAD",
+                    "path": f"{args.app_folder_path}"
+                },
+                "destination": {
+                    "server": "https://kubernetes.default.svc",
+                    "namespace": f"{args.namespace}"
+                },
+                "syncPolicy": {
+                    "automated": syncPolicy,
+                    "syncOptions": ["CreateNamespace=true"]
+                }
+            }
+        }
+
+        
+        # Projenin zaten var olup olmadığını kontrol edin
+        try:
+            get_response = session.get(f"{project_url}/{project_name}", headers=headers)
+            if get_response.status_code == 200:
+                print(f"Proje zaten mevcut: {project_name}")
+                return True  # Proje zaten varsa başarılı kabul et
+            elif get_response.status_code == 404 or get_response.status_code == 403:
+                # Proje yoksa oluşturmaya devam et
+                try:
+                    response = session.post(project_url, headers=headers, data=json.dumps(payload))
+                    response.raise_for_status()
+                    print(f"Proje oluşturuldu: {project_name}")
+                except requests.exceptions.RequestException as e:
+                    print(f"Proje oluşturulamadı '{project_name}': {e}")
+                    print(f"Response text: {e.response.text}") # Daha fazla hata ayıklama bilgisi ekleyin
+                    return False
+            else:
+                get_response.raise_for_status()  # Diğer hatalı durum kodları için hata yükselt
+        except requests.exceptions.RequestException as e:
+            print(f"Proje varlığı kontrol edilemedi '{project_name}': {e}")
+            print(f"Response text: {e.response.text}")  # Daha fazla hata ayıklama bilgisi ekleyin
+            return False
+        return True
+
+    token = _login()
+    create_project_if_not_exist(args.argo_app_name)

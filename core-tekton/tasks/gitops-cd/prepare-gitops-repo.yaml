@@ -1,0 +1,99 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: prepare-gitops-repo
+  namespace: tekton-executions
+spec:
+  params:
+  - name: environment
+    type: string
+    description: environment
+    default: test
+  - name: workspace
+    type: string
+    description: workspace
+  - name: project
+    type: string
+    description: project
+  - name: namespace
+    type: string
+    description: namespace
+  - name: service
+    type: string
+    description: service
+  - name: version
+    type: string
+    description: version
+  - name: image
+    type: string
+    description: image
+  workspaces:
+  - name: output
+  steps:
+  - name: prepare-gitops-repo
+    image: python:3.9-alpine
+    script: |
+      #!/bin/sh
+      apk add yq
+      cd $(workspaces.output.path)/$(params.workspace)/$(params.project)/$(params.service)/$(params.version)
+      mkdir -p $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)
+
+      if [ -z "$(find $(params.workspace)/$(params.project)/$(params.service)/$(params.environment) -mindepth 1 -maxdepth 1)" ]; then
+        echo "Folder is empty"
+        pip3 install -r /templates/parser/requirements.txt
+        cp -r /templates/**/..data/*.yaml $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)
+
+        yq eval '.name = "$(params.service)"' -i $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml || exit 1
+        yq eval '.namespace = "$(params.namespace)"' -i $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml || exit 1
+        yq eval '.environment = "$(params.environment)"' -i $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml || exit 1
+        yq eval '.image = "$(params.image)"' -i $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml || exit 1
+        
+        python /templates/parser/parser.py --values_path $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml --template_path $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/deployment.yaml || exit 1
+        python /templates/parser/parser.py --values_path $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml --template_path $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/service.yaml || exit 1
+
+        rm -rf $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/values.yaml
+        echo "-----------------------------------------"
+        cat $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/deployment.yaml
+        echo "-----------------------------------------"
+        cat $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)/service.yaml
+        echo "-----------------------------------------"
+      else
+        echo "Folder is not empty"
+        cd $(params.workspace)/$(params.project)/$(params.service)/$(params.environment)
+        img=$(echo "$(params.image)" | cut -d':' -f1)
+        echo "repo: $img"
+
+        find . -type f -name "*.yaml" -o -name "*.yml" | while IFS= read -r file; do
+          yq -i '
+            (.spec.template.spec.containers[] | 
+            select(.image | contains("'${img}'"))) += 
+            {"image": "$(params.image)"}
+          ' "$file" || exit 1;
+          echo $file
+          cat $file
+        done
+      fi
+
+      if [ $? -ne 0 ]; then
+        echo "Command failed. Changing Task status to failed."
+        exit 1 # Explicitly set a non-zero exit code to fail the task
+      fi
+    volumeMounts:
+        - name: templates
+          mountPath: /templates/templates
+        - name: values-template
+          mountPath: /templates/template-values
+        - name: parser
+          mountPath: /templates/parser
+  volumes:
+    - name: templates
+      configMap:
+        name: templates
+    - name: values-template
+      configMap:
+        name: template-values
+    - name: parser
+      configMap:
+        name: parser
+
+      

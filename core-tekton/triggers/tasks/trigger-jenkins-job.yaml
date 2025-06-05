@@ -1,0 +1,46 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: trigger-jenkins-job
+  namespace: tekton-executions
+spec:
+  params:
+    - name: repository_name
+      type: string
+    - name: branch
+      type: string
+  steps:
+    - name: trigger-job
+      image: python:3.9-alpine
+      env:
+      - name: JENKINS_URL
+        valueFrom:
+          secretKeyRef:
+            name: trigger-jenkins
+            key: JENKINS_URL
+      - name: USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: trigger-jenkins
+            key: USERNAME
+      - name: API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: trigger-jenkins
+            key: API_TOKEN
+      script: |
+        pip3 install -r /templates/trigger-jenkins/requirements.txt || exit 1
+        
+        python /templates/trigger-jenkins/trigger_jenkins.py \
+        --branch $(params.branch) \
+        --repository_name $(params.repository_name) \
+        --username $USERNAME \
+        --api_token $API_TOKEN \
+        --jenkins_url $JENKINS_URL || exit 1
+      volumeMounts:
+        - name: trigger-jenkins
+          mountPath: /templates/trigger-jenkins
+  volumes:
+    - name: trigger-jenkins
+      configMap:
+        name: trigger-jenkins

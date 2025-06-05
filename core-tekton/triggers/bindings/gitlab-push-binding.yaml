@@ -1,0 +1,13 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitlab-push-binding
+  namespace: tekton-executions
+spec:
+  params:
+    - name: revision
+      value: $(body.checkout_sha)
+    - name: repository_name
+      value: $(body.project.name)
+    - name: branch
+      value: $(body.ref)
