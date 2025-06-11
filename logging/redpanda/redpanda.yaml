@@ -50,9 +50,9 @@ metadata:
 spec:
   tls:
     - hosts:
-        - redpanda-logging.tr.zip.co
+        - redpanda-logging.address.com
   rules:
-    - host: redpanda-logging.tr.zip.co
+    - host: redpanda-logging.address.com
       http:
         paths:
           - path: /

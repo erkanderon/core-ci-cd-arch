@@ -9,7 +9,7 @@ def configureInit(Map config) {
         config.scm_global_config.credentialsId = "${config.scm_credentials_id}"
     }
 
-    config.container_artifact_repo_address = "registry.tr.zip.co"
-    config.artifact_repo_address = "nexus.tr.zip.co"
+    config.container_artifact_repo_address = "registry.adress.com"
+    config.artifact_repo_address = "nexus.address.com"
 
 }

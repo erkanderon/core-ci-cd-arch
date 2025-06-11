@@ -18,7 +18,7 @@ metadata:
     kubernetes.io/ingressClassName: nginx # Kullandığınız Ingress Controller'a göre değiştirin
 spec:
   rules:
-  - host: kafka-logging.tr.zip.co
+  - host: kafka-logging.address.com
     http:
       paths:
       - path: /
@@ -43,5 +43,5 @@ spec:
 ####             }
 ####           ]
 ####         }' \
-####     "https://kafka-logging.tr.zip.co:443/topics/hola"
+####     "https://kafka-logging.address.com:443/topics/hola"
 ####
