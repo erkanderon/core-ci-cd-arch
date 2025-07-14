@@ -1,0 +1,1 @@
+![Logo](../images/logging-architecture.png)

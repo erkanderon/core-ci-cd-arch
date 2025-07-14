@@ -1,0 +1,43 @@
+SELECT
+  splitByChar('\t', _line)[1] AS log_timestamp,
+  splitByChar('\t', _line)[2] AS tag,
+  JSONExtractString(splitByChar('\t', _line)[3], '@timestamp') AS event_timestamp,
+  JSONExtractString(splitByChar('\t', _line)[3], 'user') AS user,
+  JSONExtractString(splitByChar('\t', _line)[3], 'action') AS action,
+  JSONExtractString(splitByChar('\t', _line)[3], 'resource') AS resource,
+  JSONExtractString(splitByChar('\t', _line)[3], 'status') AS status,
+  JSONExtractString(splitByChar('\t', _line)[3], 'ip') AS ip,
+  JSONExtractString(splitByChar('\t', _line)[3], 'request_id') AS request_id,
+  JSONExtractUInt(splitByChar('\t', _line)[3], 'version') AS version
+FROM s3(
+  'http://minio-1720438607.minio.svc:9000/audit-logs/logs/audit/*.log.gz',
+  'fIm8ClEwCoPPBxohPxXq',
+  '0z08oUsSDU6nIKzcyXz7zk04V8nXxNHaFCAy0sUR',
+  'LineAsString',
+  '_line String',
+  'gzip'
+)
+WHERE tag = 'kube.audit';
+
+
+
+
+
+SELECT
+  splitByChar('\t', _line)[1] AS log_timestamp,
+  splitByChar('\t', _line)[2] AS tag,
+  JSONExtractString(splitByChar('\t', _line)[3], '@timestamp') AS event_timestamp,
+  JSONExtractString(splitByChar('\t', _line)[3], 'user') AS user,
+  JSONExtractString(splitByChar('\t', _line)[3], 'action') AS action,
+  JSONExtractString(splitByChar('\t', _line)[3], 'resource') AS resource,
+  JSONExtractString(splitByChar('\t', _line)[3], 'status') AS status,
+  JSONExtractString(splitByChar('\t', _line)[3], 'ip') AS ip,
+  JSONExtractString(splitByChar('\t', _line)[3], 'request_id') AS request_id,
+  JSONExtractUInt(splitByChar('\t', _line)[3], 'version') AS version
+FROM s3(
+  'http://minio-1720438607.minio.svc:9000/audit-logs/logs/audit/*.log.gz',
+  'LineAsString',
+  '_line String',
+  'gzip'
+)
+WHERE tag = 'kube.audit';

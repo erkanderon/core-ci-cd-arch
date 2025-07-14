@@ -1,0 +1,1 @@
+curl -XPOST audit-flask-app.audit-demo.svc:8080/login -d '{"user":"alice"}' -H 'Content-Type: application/json'
