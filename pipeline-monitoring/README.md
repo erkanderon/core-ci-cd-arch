@@ -1,0 +1,1 @@
+![Logo](../images/pipeline-monitoring-ss.png)
